@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser, hasLocationAccess, requireRole, INCIDENT_ROLES } from "@/lib/auth";
 import { handleApiError, forbidden } from "@/lib/errors";
-import { createIncidentSchema } from "@/lib/validation";
+import { createIncidentSchema, incidentStatusSchema } from "@/lib/validation";
 import { parseDateOnly } from "@/lib/dates";
 
 const incidentInclude = {
@@ -24,9 +24,22 @@ export async function GET(request: NextRequest) {
     const locationId = request.nextUrl.searchParams.get("locationId");
     const from = request.nextUrl.searchParams.get("from");
     const to = request.nextUrl.searchParams.get("to");
+    const employeeId = request.nextUrl.searchParams.get("employeeId");
+    const statusParam = request.nextUrl.searchParams.get("status");
 
     if (locationId && !hasLocationAccess(user, locationId)) {
       throw forbidden();
+    }
+
+    const statusResult = statusParam
+      ? incidentStatusSchema.safeParse(statusParam)
+      : null;
+
+    if (statusResult && !statusResult.success) {
+      return NextResponse.json(
+        { error: "Paramètre status invalide" },
+        { status: 400 }
+      );
     }
 
     const canSeeAll = user.role === "ADMIN" || user.role === "MANAGEMENT";
@@ -48,6 +61,8 @@ export async function GET(request: NextRequest) {
               },
             }
           : {}),
+        ...(employeeId ? { employees: { some: { userId: employeeId } } } : {}),
+        ...(statusResult?.success ? { status: statusResult.data } : {}),
       },
       include: incidentInclude,
       orderBy: { incidentDate: "desc" },

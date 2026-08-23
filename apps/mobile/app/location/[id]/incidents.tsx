@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,26 +10,38 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { api } from "@/api/client";
-import type { Incident, IncidentReason } from "@/types/incident";
+import type { Incident, IncidentReason, IncidentStatus } from "@/types/incident";
+import type { Location } from "@/types/location";
 import type { TeamMember } from "@/types/user";
 import { todayDateOnly } from "@/lib/dates";
+import { LOCATION_LABELS } from "@/constants/locations";
 
-const STATUS_LABELS: Record<Incident["status"], string> = {
+const STATUS_LABELS: Record<IncidentStatus, string> = {
   NEW: "Nouveau",
   IN_PROGRESS: "En cours",
   RESOLVED: "Résolu",
   CLOSED: "Fermé",
 };
 
+const STATUS_OPTIONS: IncidentStatus[] = ["NEW", "IN_PROGRESS", "RESOLVED", "CLOSED"];
+
 export default function LocationIncidentsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [incidents, setIncidents] = useState<Incident[]>([]);
+
+  const [locations, setLocations] = useState<Location[]>([]);
   const [reasons, setReasons] = useState<IncidentReason[]>([]);
   const [team, setTeam] = useState<TeamMember[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+
+  const [locationFilter, setLocationFilter] = useState(id ?? "");
+  const [employeeFilter, setEmployeeFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<IncidentStatus | "">("");
+
+  const [loadingIncidents, setLoadingIncidents] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -41,22 +54,43 @@ export default function LocationIncidentsScreen() {
   const [preventiveAction, setPreventiveAction] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const load = useCallback(() => {
-    if (!id) return;
-    setLoading(true);
-    Promise.all([api.getIncidents(id), api.getIncidentReasons(), api.getLocationUsers(id)])
-      .then(([incs, rsns, members]) => {
-        setIncidents(incs);
+  useEffect(() => {
+    Promise.all([api.getLocations(), api.getIncidentReasons()])
+      .then(([locs, rsns]) => {
+        setLocations(locs);
         setReasons(rsns);
-        setTeam(members);
       })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [id]);
+      .catch((err) => setError(err.message));
+  }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    api
+      .getTeamMembers(locationFilter || undefined)
+      .then(setTeam)
+      .catch((err) => setError(err.message));
+  }, [locationFilter]);
+
+  const loadIncidents = useCallback(() => {
+    setLoadingIncidents(true);
+    api
+      .getIncidents({
+        locationId: locationFilter || undefined,
+        employeeId: employeeFilter || undefined,
+        status: statusFilter || undefined,
+      })
+      .then(setIncidents)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoadingIncidents(false));
+  }, [locationFilter, employeeFilter, statusFilter]);
+
+  useEffect(() => {
+    loadIncidents();
+  }, [loadIncidents]);
+
+  const handleLocationFilterChange = (value: string) => {
+    setLocationFilter(value);
+    setEmployeeFilter("");
+  };
 
   const toggleEmployee = (userId: string) => {
     setEmployeeIds((prev) =>
@@ -74,8 +108,17 @@ export default function LocationIncidentsScreen() {
     setPreventiveAction("");
   };
 
+  const openForm = (prefillEmployeeId?: string) => {
+    resetForm();
+    if (prefillEmployeeId) {
+      setEmployeeIds([prefillEmployeeId]);
+    }
+    setShowForm(true);
+  };
+
   const handleSubmit = async () => {
-    if (!id) return;
+    const targetLocationId = locationFilter || id;
+    if (!targetLocationId) return;
     if (!reasonId) {
       Alert.alert("Genre d'incident requis", "Sélectionne un genre d'incident.");
       return;
@@ -88,7 +131,7 @@ export default function LocationIncidentsScreen() {
     setSubmitting(true);
     try {
       await api.createIncident({
-        locationId: id,
+        locationId: targetLocationId,
         incidentDate,
         reasonId,
         description: description.trim(),
@@ -97,9 +140,8 @@ export default function LocationIncidentsScreen() {
         preventiveAction: preventiveAction.trim() || undefined,
         employeeIds,
       });
-      resetForm();
       setShowForm(false);
-      load();
+      loadIncidents();
     } catch (err: any) {
       Alert.alert("Erreur", err.message ?? "Impossible d'envoyer le rapport");
     } finally {
@@ -107,13 +149,7 @@ export default function LocationIncidentsScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.center}>
-        <ActivityIndicator size="large" />
-      </SafeAreaView>
-    );
-  }
+  const filteredEmployeeName = team.find((m) => m.id === employeeFilter);
 
   if (error) {
     return (
@@ -131,7 +167,7 @@ export default function LocationIncidentsScreen() {
         </Pressable>
         <Text style={styles.title}>Rapports d'incident</Text>
         {!showForm ? (
-          <Pressable onPress={() => setShowForm(true)}>
+          <Pressable onPress={() => openForm()}>
             <Text style={styles.back}>+ Nouveau</Text>
           </Pressable>
         ) : null}
@@ -170,7 +206,7 @@ export default function LocationIncidentsScreen() {
                 </Pressable>
               ))}
               {team.length === 0 ? (
-                <Text style={styles.hint}>Aucun employé assigné à ce lieu.</Text>
+                <Text style={styles.hint}>Aucun employé disponible.</Text>
               ) : null}
             </View>
           </Field>
@@ -244,51 +280,129 @@ export default function LocationIncidentsScreen() {
           </Pressable>
         </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={styles.list}>
-          {incidents.length === 0 ? (
-            <Text style={styles.hint}>Aucun rapport d'incident pour ce lieu.</Text>
-          ) : null}
-          {incidents.map((incident) => (
-            <View key={incident.id} style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardDate}>{incident.incidentDate.slice(0, 10)}</Text>
-                <Text style={styles.statusBadge}>{STATUS_LABELS[incident.status]}</Text>
+        <>
+          <View style={styles.filterBar}>
+            <View style={styles.filterField}>
+              <Text style={styles.filterLabel}>Lieu</Text>
+              <View style={styles.pickerWrap}>
+                <Picker
+                  selectedValue={locationFilter}
+                  onValueChange={handleLocationFilterChange}
+                  mode="dropdown"
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Tous les lieux" value="" />
+                  {locations.map((loc) => (
+                    <Picker.Item
+                      key={loc.id}
+                      label={LOCATION_LABELS[loc.type] ?? loc.name}
+                      value={loc.id}
+                    />
+                  ))}
+                </Picker>
               </View>
-              <Text style={styles.cardReason}>{incident.reason.name}</Text>
-              <Text style={styles.cardDescription}>{incident.description}</Text>
-
-              {incident.recurrence ? (
-                <View style={styles.cardSection}>
-                  <Text style={styles.cardSectionLabel}>Problème récurrent</Text>
-                  <Text style={styles.cardSectionText}>{incident.recurrence}</Text>
-                </View>
-              ) : null}
-
-              {incident.correctiveAction ? (
-                <View style={styles.cardSection}>
-                  <Text style={styles.cardSectionLabel}>Actions correctrices prises</Text>
-                  <Text style={styles.cardSectionText}>{incident.correctiveAction}</Text>
-                </View>
-              ) : null}
-
-              {incident.preventiveAction ? (
-                <View style={styles.cardSection}>
-                  <Text style={styles.cardSectionLabel}>Actions préventives à prendre</Text>
-                  <Text style={styles.cardSectionText}>{incident.preventiveAction}</Text>
-                </View>
-              ) : null}
-
-              <Text style={styles.cardMeta}>
-                Rapporté par {incident.reportedBy.firstName} {incident.reportedBy.lastName}
-                {incident.employees.length > 0
-                  ? ` · Concerne ${incident.employees
-                      .map((e) => `${e.user.firstName} ${e.user.lastName}`)
-                      .join(", ")}`
-                  : ""}
-              </Text>
             </View>
-          ))}
-        </ScrollView>
+            <View style={styles.filterField}>
+              <Text style={styles.filterLabel}>Employé</Text>
+              <View style={styles.pickerWrap}>
+                <Picker
+                  selectedValue={employeeFilter}
+                  onValueChange={setEmployeeFilter}
+                  mode="dropdown"
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Tous les employés" value="" />
+                  {team.map((member) => (
+                    <Picker.Item
+                      key={member.id}
+                      label={`${member.firstName} ${member.lastName}`}
+                      value={member.id}
+                    />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+            <View style={styles.filterField}>
+              <Text style={styles.filterLabel}>État de traitement</Text>
+              <View style={styles.pickerWrap}>
+                <Picker
+                  selectedValue={statusFilter}
+                  onValueChange={(v) => setStatusFilter(v as IncidentStatus | "")}
+                  mode="dropdown"
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Tous les états" value="" />
+                  {STATUS_OPTIONS.map((s) => (
+                    <Picker.Item key={s} label={STATUS_LABELS[s]} value={s} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+          </View>
+
+          <ScrollView contentContainerStyle={styles.list}>
+            {employeeFilter && filteredEmployeeName ? (
+              <View style={styles.historyBar}>
+                <Text style={styles.historyTitle}>
+                  Historique — {filteredEmployeeName.firstName} {filteredEmployeeName.lastName}
+                </Text>
+                <Pressable
+                  style={styles.historyNewButton}
+                  onPress={() => openForm(employeeFilter)}
+                >
+                  <Text style={styles.historyNewButtonText}>+ Nouveau rapport</Text>
+                </Pressable>
+              </View>
+            ) : null}
+
+            {loadingIncidents ? (
+              <ActivityIndicator size="large" style={{ marginTop: 24 }} />
+            ) : incidents.length === 0 ? (
+              <Text style={styles.hint}>Aucun rapport ne correspond à ce filtre.</Text>
+            ) : (
+              incidents.map((incident) => (
+                <View key={incident.id} style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.cardDate}>{incident.incidentDate.slice(0, 10)}</Text>
+                    <Text style={styles.statusBadge}>{STATUS_LABELS[incident.status]}</Text>
+                  </View>
+                  <Text style={styles.cardReason}>{incident.reason.name}</Text>
+                  <Text style={styles.cardDescription}>{incident.description}</Text>
+
+                  {incident.recurrence ? (
+                    <View style={styles.cardSection}>
+                      <Text style={styles.cardSectionLabel}>Problème récurrent</Text>
+                      <Text style={styles.cardSectionText}>{incident.recurrence}</Text>
+                    </View>
+                  ) : null}
+
+                  {incident.correctiveAction ? (
+                    <View style={styles.cardSection}>
+                      <Text style={styles.cardSectionLabel}>Actions correctrices prises</Text>
+                      <Text style={styles.cardSectionText}>{incident.correctiveAction}</Text>
+                    </View>
+                  ) : null}
+
+                  {incident.preventiveAction ? (
+                    <View style={styles.cardSection}>
+                      <Text style={styles.cardSectionLabel}>Actions préventives à prendre</Text>
+                      <Text style={styles.cardSectionText}>{incident.preventiveAction}</Text>
+                    </View>
+                  ) : null}
+
+                  <Text style={styles.cardMeta}>
+                    Rapporté par {incident.reportedBy.firstName} {incident.reportedBy.lastName}
+                    {incident.employees.length > 0
+                      ? ` · Concerne ${incident.employees
+                          .map((e) => `${e.user.firstName} ${e.user.lastName}`)
+                          .join(", ")}`
+                      : ""}
+                  </Text>
+                </View>
+              ))
+            )}
+          </ScrollView>
+        </>
       )}
     </SafeAreaView>
   );
@@ -315,6 +429,48 @@ const styles = StyleSheet.create({
   },
   back: { color: "#8a5a3b", fontWeight: "600", fontSize: 15 },
   title: { fontSize: 16, fontWeight: "700", flex: 1, textAlign: "center" },
+  filterBar: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0eeec",
+    gap: 8,
+  },
+  filterField: { gap: 4 },
+  filterLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+    color: "#8a5a3b",
+  },
+  pickerWrap: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    backgroundColor: "#f4f1ee",
+    overflow: "hidden",
+    justifyContent: "center",
+  },
+  picker: Platform.select({
+    ios: { height: 120 },
+    default: { height: 44 },
+  }) as object,
+  historyBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    marginBottom: 12,
+  },
+  historyTitle: { fontSize: 14, fontWeight: "700", flex: 1 },
+  historyNewButton: {
+    backgroundColor: "#8a5a3b",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  historyNewButtonText: { color: "#fff", fontWeight: "700", fontSize: 12 },
   list: { padding: 16, gap: 12 },
   card: {
     padding: 16,

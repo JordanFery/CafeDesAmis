@@ -9,7 +9,12 @@ import type {
   MonthlyInventory,
   MonthlyInventoryItem,
 } from "@/types/inventory";
-import type { CreateIncidentInput, Incident, IncidentReason } from "@/types/incident";
+import type {
+  CreateIncidentInput,
+  Incident,
+  IncidentReason,
+  IncidentStatus,
+} from "@/types/incident";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
 
@@ -84,13 +89,25 @@ export const api = {
       method: "POST",
     }),
 
-  getLocationUsers: (locationId: string) =>
-    request<TeamMember[]>(`/api/users?locationId=${locationId}`),
+  getTeamMembers: (locationId?: string) =>
+    request<TeamMember[]>(
+      `/api/users${locationId ? `?locationId=${locationId}` : ""}`
+    ),
 
   getIncidentReasons: () => request<IncidentReason[]>("/api/incident-reasons"),
 
-  getIncidents: (locationId: string) =>
-    request<Incident[]>(`/api/incidents?locationId=${locationId}`),
+  getIncidents: (filters: {
+    locationId?: string;
+    employeeId?: string;
+    status?: IncidentStatus;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters.locationId) params.set("locationId", filters.locationId);
+    if (filters.employeeId) params.set("employeeId", filters.employeeId);
+    if (filters.status) params.set("status", filters.status);
+    const query = params.toString();
+    return request<Incident[]>(`/api/incidents${query ? `?${query}` : ""}`);
+  },
 
   createIncident: (data: CreateIncidentInput) =>
     request<Incident>("/api/incidents", {
