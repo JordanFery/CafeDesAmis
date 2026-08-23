@@ -35,32 +35,37 @@ async function main() {
   }
 
   let created = 0;
-  let skipped = 0;
+  let updated = 0;
 
   for (const entry of CATALOG) {
     const categoryId = categoriesByName.get(entry.category)!;
     const supplierId = suppliersByName.get(entry.supplier)!;
 
-    let product = await prisma.product.findFirst({ where: { name: entry.name } });
+    const existing = await prisma.product.findFirst({ where: { name: entry.name } });
 
-    if (!product) {
-      product = await prisma.product.create({
-        data: {
-          name: entry.name,
-          categoryId,
-          unit: entry.unit,
-          // Aucun seuil fourni par la feuille de commande : à ajuster manuellement.
-          stockMinimum: 0,
-        },
-      });
-      created += 1;
+    const product = existing
+      ? await prisma.product.update({
+          where: { id: existing.id },
+          data: { categoryId, unit: entry.unit, stockMinimum: entry.stockMinimum },
+        })
+      : await prisma.product.create({
+          data: {
+            name: entry.name,
+            categoryId,
+            unit: entry.unit,
+            stockMinimum: entry.stockMinimum,
+          },
+        });
+
+    if (existing) {
+      updated += 1;
     } else {
-      skipped += 1;
+      created += 1;
     }
 
     await prisma.productSupplier.upsert({
       where: { productId_supplierId: { productId: product.id, supplierId } },
-      update: {},
+      update: { unitsPerCase: entry.unitsPerCase, supplierUnit: entry.unit },
       create: {
         productId: product.id,
         supplierId,
@@ -72,10 +77,7 @@ async function main() {
   }
 
   console.log(
-    `Seed terminé. ${categoriesByName.size} catégories, ${suppliersByName.size} fournisseurs, ${created} produits créés (${skipped} déjà existants).`
-  );
-  console.log(
-    "Tous les seuils (stockMinimum) démarrent à 0 : la feuille de commande fournie ne contenait pas de seuils, à définir via l'admin."
+    `Seed terminé. ${categoriesByName.size} catégories, ${suppliersByName.size} fournisseurs, ${created} produits créés, ${updated} mis à jour.`
   );
   console.log(
     "Aucun utilisateur n'est créé par ce seed : les comptes doivent être créés dans Supabase Auth (voir README), puis liés via la table User (authUserId)."
