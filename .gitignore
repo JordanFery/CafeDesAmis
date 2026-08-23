@@ -1,0 +1,25 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+
+# Next.js
+apps/api/.next/
+apps/api/out/
+apps/api/next-env.d.ts
+apps/api/tsconfig.tsbuildinfo
+
+# Prisma
+apps/api/prisma/dev.db*
+
+# Expo
+apps/mobile/.expo/
+apps/mobile/dist/
+apps/mobile/web-build/
+apps/mobile/*.tsbuildinfo
+
+# Misc
+.DS_Store
+*.log
+npm-debug.log*
+coverage/
