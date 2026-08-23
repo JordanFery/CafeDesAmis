@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import type { CurrentUser } from "@/types/user";
 import type { Location } from "@/types/location";
+import type { DailyInventory, DailyInventoryItem, InventoryItemStatus } from "@/types/inventory";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
 
@@ -32,4 +33,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   me: () => request<CurrentUser>("/api/users/me"),
   getLocations: () => request<Location[]>("/api/locations"),
+
+  ensureDailyInventory: (locationId: string) =>
+    request<DailyInventory>("/api/daily-inventories", {
+      method: "POST",
+      body: JSON.stringify({ locationId }),
+    }),
+
+  updateInventoryItem: (
+    inventoryId: string,
+    productId: string,
+    data: { quantity?: number | null; status?: InventoryItemStatus }
+  ) =>
+    request<DailyInventoryItem>(
+      `/api/daily-inventories/${inventoryId}/items/${productId}`,
+      { method: "PATCH", body: JSON.stringify(data) }
+    ),
+
+  submitDailyInventory: (inventoryId: string) =>
+    request(`/api/daily-inventories/${inventoryId}/submit`, { method: "POST" }),
 };

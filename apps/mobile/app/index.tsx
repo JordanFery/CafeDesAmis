@@ -1,17 +1,12 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { Redirect } from "expo-router";
+import { Redirect, router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/api/client";
+import { LOCATION_LABELS } from "@/constants/locations";
 import type { CurrentUser } from "@/types/user";
 import type { Location } from "@/types/location";
-
-const LOCATION_LABELS: Record<Location["type"], string> = {
-  CHALET: "Chalet",
-  PAVILION: "Pavillon",
-  KITCHEN: "Cuisine",
-};
 
 export default function HomeScreen() {
   const { session, loading: authLoading, signOut } = useAuth();
@@ -84,11 +79,14 @@ export default function HomeScreen() {
           <Text style={styles.empty}>Aucun lieu accessible pour le moment.</Text>
         }
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <Pressable
+            style={styles.card}
+            onPress={() => router.push(`/location/${item.id}`)}
+          >
             <Text style={styles.cardTitle}>
               {LOCATION_LABELS[item.type] ?? item.name}
             </Text>
-          </View>
+          </Pressable>
         )}
       />
     </SafeAreaView>

@@ -42,3 +42,19 @@ export const createProductSchema = z.object({
 export const updateProductSchema = createProductSchema.partial().extend({
   isActive: z.boolean().optional(),
 });
+
+const dateOnlySchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Format attendu : AAAA-MM-JJ");
+
+export const createDailyInventorySchema = z.object({
+  locationId: z.string().uuid(),
+  inventoryDate: dateOnlySchema.optional(),
+});
+
+export const inventoryItemStatusSchema = z.enum(["CONTROLLED", "NOT_CONTROLLED"]);
+
+export const updateDailyInventoryItemSchema = z.object({
+  quantity: z.number().nonnegative().nullable().optional(),
+  status: inventoryItemStatusSchema.optional(),
+});
