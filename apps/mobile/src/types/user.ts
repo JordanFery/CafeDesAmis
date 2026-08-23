@@ -9,3 +9,10 @@ export type CurrentUser = {
   role: UserRole;
   locationIds: string[];
 };
+
+export type TeamMember = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  role: UserRole;
+};

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, IncidentReasonType } from "@prisma/client";
 import { CATALOG } from "./seed-data/catalog";
 
 const prisma = new PrismaClient();
@@ -76,8 +76,25 @@ async function main() {
     });
   }
 
+  const incidentReasons: { name: string; type: IncidentReasonType }[] = [
+    { name: "Comportement", type: "BEHAVIOR" },
+    { name: "Retard ou absence", type: "LATE_ABSENCE" },
+    { name: "Conflit entre employés", type: "CONFLICT" },
+    { name: "Non-respect d'une procédure", type: "PROCEDURE_NON_COMPLIANCE" },
+    { name: "Problème avec un client", type: "CUSTOMER_ISSUE" },
+    { name: "Autre", type: "OTHER" },
+  ];
+
+  for (const reason of incidentReasons) {
+    await prisma.incidentReason.upsert({
+      where: { name: reason.name },
+      update: {},
+      create: reason,
+    });
+  }
+
   console.log(
-    `Seed terminé. ${categoriesByName.size} catégories, ${suppliersByName.size} fournisseurs, ${created} produits créés, ${updated} mis à jour.`
+    `Seed terminé. ${categoriesByName.size} catégories, ${suppliersByName.size} fournisseurs, ${created} produits créés, ${updated} mis à jour, ${incidentReasons.length} motifs d'incident.`
   );
   console.log(
     "Aucun utilisateur n'est créé par ce seed : les comptes doivent être créés dans Supabase Auth (voir README), puis liés via la table User (authUserId)."

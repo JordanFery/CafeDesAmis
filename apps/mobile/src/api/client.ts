@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { CurrentUser } from "@/types/user";
+import type { CurrentUser, TeamMember } from "@/types/user";
 import type { Location } from "@/types/location";
 import type {
   CatalogProduct,
@@ -9,6 +9,7 @@ import type {
   MonthlyInventory,
   MonthlyInventoryItem,
 } from "@/types/inventory";
+import type { CreateIncidentInput, Incident, IncidentReason } from "@/types/incident";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
 
@@ -81,5 +82,19 @@ export const api = {
   validateMonthlyInventory: (inventoryId: string) =>
     request<MonthlyInventory>(`/api/monthly-inventories/${inventoryId}/validate`, {
       method: "POST",
+    }),
+
+  getLocationUsers: (locationId: string) =>
+    request<TeamMember[]>(`/api/users?locationId=${locationId}`),
+
+  getIncidentReasons: () => request<IncidentReason[]>("/api/incident-reasons"),
+
+  getIncidents: (locationId: string) =>
+    request<Incident[]>(`/api/incidents?locationId=${locationId}`),
+
+  createIncident: (data: CreateIncidentInput) =>
+    request<Incident>("/api/incidents", {
+      method: "POST",
+      body: JSON.stringify(data),
     }),
 };

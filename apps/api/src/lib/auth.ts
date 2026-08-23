@@ -54,6 +54,10 @@ export function requireRole(user: AuthenticatedUser, roles: UserRole[]) {
   }
 }
 
+// Rapports d'incident : réservés aux chefs d'équipe et à l'administration.
+// Les employés (serveurs) n'y ont aucun accès.
+export const INCIDENT_ROLES: UserRole[] = ["TEAM_LEADER", "MANAGEMENT", "ADMIN"];
+
 /** ADMIN et MANAGEMENT voient tous les lieux ; les autres, seulement les leurs. */
 export function hasLocationAccess(
   user: AuthenticatedUser,

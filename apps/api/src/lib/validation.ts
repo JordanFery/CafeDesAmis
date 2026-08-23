@@ -43,7 +43,7 @@ export const updateProductSchema = createProductSchema.partial().extend({
   isActive: z.boolean().optional(),
 });
 
-const dateOnlySchema = z
+export const dateOnlySchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Format attendu : AAAA-MM-JJ");
 
@@ -68,4 +68,46 @@ export const createMonthlyInventorySchema = z.object({
 
 export const updateMonthlyInventoryItemSchema = z.object({
   quantity: z.number().nonnegative(),
+});
+
+export const incidentReasonTypeSchema = z.enum([
+  "BEHAVIOR",
+  "LATE_ABSENCE",
+  "CONFLICT",
+  "PROCEDURE_NON_COMPLIANCE",
+  "CUSTOMER_ISSUE",
+  "OTHER",
+]);
+
+export const createIncidentReasonSchema = z.object({
+  name: z.string().min(1).max(120),
+  type: incidentReasonTypeSchema,
+});
+
+export const incidentStatusSchema = z.enum([
+  "NEW",
+  "IN_PROGRESS",
+  "RESOLVED",
+  "CLOSED",
+]);
+
+export const createIncidentSchema = z.object({
+  locationId: z.string().uuid(),
+  incidentDate: dateOnlySchema,
+  reasonId: z.string().uuid(),
+  description: z.string().min(1).max(4000),
+  recurrence: z.string().max(500).optional(),
+  correctiveAction: z.string().max(2000).optional(),
+  preventiveAction: z.string().max(2000).optional(),
+  employeeIds: z.array(z.string().uuid()).default([]),
+});
+
+export const updateIncidentSchema = z.object({
+  reasonId: z.string().uuid().optional(),
+  description: z.string().min(1).max(4000).optional(),
+  recurrence: z.string().max(500).nullable().optional(),
+  correctiveAction: z.string().max(2000).nullable().optional(),
+  preventiveAction: z.string().max(2000).nullable().optional(),
+  status: incidentStatusSchema.optional(),
+  employeeIds: z.array(z.string().uuid()).optional(),
 });

@@ -13,10 +13,14 @@ import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { api } from "@/api/client";
 import type { DailyInventory, DailyInventoryItem } from "@/types/inventory";
+import type { CurrentUser } from "@/types/user";
+
+const INCIDENT_ROLES = ["TEAM_LEADER", "MANAGEMENT", "ADMIN"];
 
 export default function LocationInventoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [inventory, setInventory] = useState<DailyInventory | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -24,9 +28,11 @@ export default function LocationInventoryScreen() {
   const load = useCallback(() => {
     if (!id) return;
     setLoading(true);
-    api
-      .ensureDailyInventory(id)
-      .then(setInventory)
+    Promise.all([api.ensureDailyInventory(id), api.me()])
+      .then(([inv, me]) => {
+        setInventory(inv);
+        setCurrentUser(me);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [id]);
@@ -127,6 +133,11 @@ export default function LocationInventoryScreen() {
         <Pressable onPress={() => router.push(`/location/${id}/monthly`)}>
           <Text style={styles.back}>Mensuel ›</Text>
         </Pressable>
+        {currentUser && INCIDENT_ROLES.includes(currentUser.role) ? (
+          <Pressable onPress={() => router.push(`/location/${id}/incidents`)}>
+            <Text style={styles.back}>Incidents ›</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       <ScrollView contentContainerStyle={styles.list}>
