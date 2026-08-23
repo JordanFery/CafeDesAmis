@@ -9,13 +9,22 @@ export async function GET(request: NextRequest) {
     await getAuthenticatedUser(request);
 
     const categoryId = request.nextUrl.searchParams.get("categoryId");
+    const supplierId = request.nextUrl.searchParams.get("supplierId");
 
     const products = await prisma.product.findMany({
       where: {
         isActive: true,
         ...(categoryId ? { categoryId } : {}),
+        ...(supplierId ? { suppliers: { some: { supplierId, isActive: true } } } : {}),
       },
-      include: { category: true },
+      include: {
+        category: true,
+        suppliers: {
+          where: { isPrimary: true, isActive: true },
+          include: { supplier: true },
+          take: 1,
+        },
+      },
       orderBy: { name: "asc" },
     });
 

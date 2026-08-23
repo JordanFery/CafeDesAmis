@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,17 +10,23 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { api } from "@/api/client";
 import type { CatalogProduct, MonthlyInventory } from "@/types/inventory";
 import type { CurrentUser } from "@/types/user";
+import type { Supplier } from "@/types/supplier";
+
+type Quantities = { counter: string; backstore: string };
 
 export default function LocationMonthlyInventoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [inventory, setInventory] = useState<MonthlyInventory | null>(null);
   const [products, setProducts] = useState<CatalogProduct[]>([]);
-  const [quantities, setQuantities] = useState<Record<string, string>>({});
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [supplierFilter, setSupplierFilter] = useState("");
+  const [quantities, setQuantities] = useState<Record<string, Quantities>>({});
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,20 +36,29 @@ export default function LocationMonthlyInventoryScreen() {
   const load = useCallback(() => {
     if (!id) return;
     setLoading(true);
-    Promise.all([api.ensureMonthlyInventory(id), api.getProducts(), api.me()])
-      .then(([inv, prods, me]) => {
+    Promise.all([
+      api.ensureMonthlyInventory(id),
+      api.getProducts(supplierFilter || undefined),
+      api.getSuppliers(),
+      api.me(),
+    ])
+      .then(([inv, prods, sups, me]) => {
         setInventory(inv);
         setProducts(prods);
+        setSuppliers(sups);
         setCurrentUser(me);
-        const initial: Record<string, string> = {};
+        const initial: Record<string, Quantities> = {};
         inv.items.forEach((item) => {
-          initial[item.productId] = item.quantity;
+          initial[item.productId] = {
+            counter: item.counterQuantity ?? "",
+            backstore: item.backstoreQuantity ?? "",
+          };
         });
         setQuantities(initial);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, supplierFilter]);
 
   useEffect(() => {
     load();
@@ -58,15 +74,33 @@ export default function LocationMonthlyInventoryScreen() {
     return Array.from(byCategory.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [products]);
 
-  const handleCommit = async (productId: string, rawValue: string) => {
+  const getQuantities = (productId: string): Quantities =>
+    quantities[productId] ?? { counter: "", backstore: "" };
+
+  const totalFor = (productId: string) => {
+    const q = getQuantities(productId);
+    const counter = q.counter.trim() === "" ? 0 : Number(q.counter.replace(",", "."));
+    const backstore = q.backstore.trim() === "" ? 0 : Number(q.backstore.replace(",", "."));
+    if (Number.isNaN(counter) || Number.isNaN(backstore)) return null;
+    return counter + backstore;
+  };
+
+  const handleChange = (productId: string, field: "counter" | "backstore", value: string) => {
+    setQuantities((prev) => ({
+      ...prev,
+      [productId]: { ...getQuantities(productId), [field]: value },
+    }));
+  };
+
+  const handleCommit = async (productId: string, field: "counter" | "backstore", rawValue: string) => {
     if (!inventory) return;
     const trimmed = rawValue.trim();
-    if (trimmed === "") return;
-    const quantity = Number(trimmed.replace(",", "."));
-    if (Number.isNaN(quantity) || quantity < 0) return;
+    const value = trimmed === "" ? null : Number(trimmed.replace(",", "."));
+    if (value !== null && (Number.isNaN(value) || value < 0)) return;
 
     try {
-      await api.updateMonthlyInventoryItem(inventory.id, productId, quantity);
+      const key = field === "counter" ? "counterQuantity" : "backstoreQuantity";
+      await api.updateMonthlyInventoryItem(inventory.id, productId, { [key]: value });
     } catch (err: any) {
       Alert.alert("Erreur", err.message ?? "Impossible d'enregistrer la quantité");
     }
@@ -132,26 +166,66 @@ export default function LocationMonthlyInventoryScreen() {
         ) : null}
       </View>
 
+      <View style={styles.filterBar}>
+        <Text style={styles.filterLabel}>Fournisseur</Text>
+        <View style={styles.pickerWrap}>
+          <Picker
+            selectedValue={supplierFilter}
+            onValueChange={setSupplierFilter}
+            mode="dropdown"
+            style={styles.picker}
+          >
+            <Picker.Item label="Tous les fournisseurs" value="" />
+            {suppliers.map((s) => (
+              <Picker.Item key={s.id} label={s.name} value={s.id} />
+            ))}
+          </Picker>
+        </View>
+      </View>
+
+      <View style={styles.columnHeader}>
+        <Text style={[styles.columnHeaderText, styles.productNameCol]} />
+        <Text style={[styles.columnHeaderText, styles.qtyCol]}>Comptoir</Text>
+        <Text style={[styles.columnHeaderText, styles.qtyCol]}>Back store</Text>
+        <Text style={[styles.columnHeaderText, styles.qtyCol]}>Total</Text>
+      </View>
+
       <ScrollView contentContainerStyle={styles.list}>
         {grouped.map(([categoryName, items]) => (
           <View key={categoryName} style={styles.categoryBlock}>
             <Text style={styles.categoryTitle}>{categoryName}</Text>
-            {items.map((product) => (
-              <View key={product.id} style={styles.row}>
-                <Text style={styles.productName}>{product.name}</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="decimal-pad"
-                  placeholder="—"
-                  value={quantities[product.id] ?? ""}
-                  editable={!isSubmitted}
-                  onChangeText={(value) =>
-                    setQuantities((prev) => ({ ...prev, [product.id]: value }))
-                  }
-                  onEndEditing={(e) => handleCommit(product.id, e.nativeEvent.text)}
-                />
-              </View>
-            ))}
+            {items.map((product) => {
+              const q = getQuantities(product.id);
+              const total = totalFor(product.id);
+              return (
+                <View key={product.id} style={styles.row}>
+                  <Text style={[styles.productName, styles.productNameCol]}>
+                    {product.name}
+                  </Text>
+                  <TextInput
+                    style={[styles.input, styles.qtyCol]}
+                    keyboardType="decimal-pad"
+                    placeholder="—"
+                    value={q.counter}
+                    editable={!isSubmitted}
+                    onChangeText={(v) => handleChange(product.id, "counter", v)}
+                    onEndEditing={(e) => handleCommit(product.id, "counter", e.nativeEvent.text)}
+                  />
+                  <TextInput
+                    style={[styles.input, styles.qtyCol]}
+                    keyboardType="decimal-pad"
+                    placeholder="—"
+                    value={q.backstore}
+                    editable={!isSubmitted}
+                    onChangeText={(v) => handleChange(product.id, "backstore", v)}
+                    onEndEditing={(e) => handleCommit(product.id, "backstore", e.nativeEvent.text)}
+                  />
+                  <Text style={[styles.totalText, styles.qtyCol]}>
+                    {total !== null ? total : "—"}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
         ))}
       </ScrollView>
@@ -198,6 +272,45 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   badgeValidated: { color: "#8a5a3b", backgroundColor: "#f4ece3" },
+  filterBar: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 4,
+  },
+  filterLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+    color: "#8a5a3b",
+  },
+  pickerWrap: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    backgroundColor: "#f4f1ee",
+    overflow: "hidden",
+    justifyContent: "center",
+  },
+  picker: Platform.select({
+    ios: { height: 120 },
+    default: { height: 44 },
+  }) as object,
+  columnHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0eeec",
+  },
+  columnHeaderText: {
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    color: "#888",
+    textAlign: "center",
+  },
   list: { padding: 16, paddingBottom: 100 },
   categoryBlock: { marginBottom: 20 },
   categoryTitle: {
@@ -210,19 +323,27 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#f0eeec",
+    gap: 6,
   },
-  productName: { fontSize: 15, fontWeight: "600", flex: 1, paddingRight: 12 },
+  productNameCol: { flex: 1.6, paddingRight: 6 },
+  qtyCol: { flex: 1 },
+  productName: { fontSize: 13, fontWeight: "600" },
   input: {
-    width: 70,
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 8,
-    padding: 8,
+    padding: 6,
     textAlign: "center",
+    fontSize: 13,
+  },
+  totalText: {
+    textAlign: "center",
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#8a5a3b",
   },
   submitButton: {
     position: "absolute",

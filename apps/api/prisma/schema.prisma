@@ -268,6 +268,10 @@ model SupplierEmployee {
   supplierId String
   userId     String
 
+  // Jour de la semaine où le chef d'équipe assigné doit effectuer
+  // l'inventaire quotidien pour ce fournisseur (1 = lundi ... 7 = dimanche).
+  inventoryWeekday Int?
+
   createdAt  DateTime  @default(now())
   archivedAt DateTime?
 
@@ -537,7 +541,11 @@ model MonthlyInventoryItem {
   inventoryId String
   productId   String
 
-  quantity Decimal @db.Decimal(10, 3)
+  // Compté séparément par emplacement ; quantity = counterQuantity + backstoreQuantity,
+  // calculé automatiquement par l'API à chaque écriture.
+  counterQuantity   Decimal? @db.Decimal(10, 3)
+  backstoreQuantity Decimal? @db.Decimal(10, 3)
+  quantity          Decimal  @db.Decimal(10, 3)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

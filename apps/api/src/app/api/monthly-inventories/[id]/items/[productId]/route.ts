@@ -8,6 +8,8 @@ type Params = { params: { id: string; productId: string } };
 
 // Contrairement à l'inventaire quotidien, les lignes n'existent pas d'avance :
 // cette route crée la ligne au premier enregistrement, puis la met à jour ensuite.
+// Le stock est compté séparément par comptoir et back store ; le total
+// (quantity) est recalculé automatiquement à chaque écriture.
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const user = await getAuthenticatedUser(request);
@@ -42,6 +44,27 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       throw notFound();
     }
 
+    const existing = await prisma.monthlyInventoryItem.findUnique({
+      where: {
+        inventoryId_productId: {
+          inventoryId: params.id,
+          productId: params.productId,
+        },
+      },
+    });
+
+    const counterQuantity =
+      parsed.data.counterQuantity !== undefined
+        ? parsed.data.counterQuantity
+        : (existing?.counterQuantity ? Number(existing.counterQuantity) : null);
+
+    const backstoreQuantity =
+      parsed.data.backstoreQuantity !== undefined
+        ? parsed.data.backstoreQuantity
+        : (existing?.backstoreQuantity ? Number(existing.backstoreQuantity) : null);
+
+    const quantity = (counterQuantity ?? 0) + (backstoreQuantity ?? 0);
+
     const item = await prisma.monthlyInventoryItem.upsert({
       where: {
         inventoryId_productId: {
@@ -52,9 +75,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       create: {
         inventoryId: params.id,
         productId: params.productId,
-        quantity: parsed.data.quantity,
+        counterQuantity,
+        backstoreQuantity,
+        quantity,
       },
-      update: { quantity: parsed.data.quantity },
+      update: { counterQuantity, backstoreQuantity, quantity },
     });
 
     return NextResponse.json(item);

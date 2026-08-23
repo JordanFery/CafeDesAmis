@@ -65,9 +65,16 @@ export default function HomeScreen() {
           <Text style={styles.greeting}>
             Bonjour {user.firstName} · {user.role}
           </Text>
-          <Pressable onPress={signOut}>
-            <Text style={styles.logout}>Déconnexion</Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            {user.role === "ADMIN" || user.role === "MANAGEMENT" ? (
+              <Pressable onPress={() => router.push("/admin/suppliers")}>
+                <Text style={styles.logout}>Fournisseurs</Text>
+              </Pressable>
+            ) : null}
+            <Pressable onPress={signOut}>
+              <Text style={styles.logout}>Déconnexion</Text>
+            </Pressable>
+          </View>
         </View>
       ) : null}
 
@@ -103,6 +110,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   greeting: { fontSize: 16, fontWeight: "600" },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 16 },
   logout: { color: "#8a5a3b", fontWeight: "500" },
   list: { padding: 16 },
   card: {

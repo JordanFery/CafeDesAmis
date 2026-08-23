@@ -31,6 +31,8 @@ export type DailyInventory = {
 export type MonthlyInventoryItem = {
   id: string;
   productId: string;
+  counterQuantity: string | null;
+  backstoreQuantity: string | null;
   quantity: string;
   product: InventoryProduct;
 };
@@ -41,6 +43,7 @@ export type CatalogProduct = {
   photoUrl: string | null;
   unit: "KG" | "LITER" | "UNIT" | "LB" | "ROLL";
   category: { id: string; name: string };
+  suppliers: { supplier: { id: string; name: string } }[];
 };
 
 export type MonthlyInventory = {

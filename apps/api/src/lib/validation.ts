@@ -66,9 +66,15 @@ export const createMonthlyInventorySchema = z.object({
   inventoryMonth: monthOnlySchema.optional(),
 });
 
-export const updateMonthlyInventoryItemSchema = z.object({
-  quantity: z.number().nonnegative(),
-});
+export const updateMonthlyInventoryItemSchema = z
+  .object({
+    counterQuantity: z.number().nonnegative().nullable().optional(),
+    backstoreQuantity: z.number().nonnegative().nullable().optional(),
+  })
+  .refine(
+    (data) => data.counterQuantity !== undefined || data.backstoreQuantity !== undefined,
+    { message: "counterQuantity ou backstoreQuantity requis" }
+  );
 
 export const incidentReasonTypeSchema = z.enum([
   "BEHAVIOR",
@@ -110,4 +116,18 @@ export const updateIncidentSchema = z.object({
   preventiveAction: z.string().max(2000).nullable().optional(),
   status: incidentStatusSchema.optional(),
   employeeIds: z.array(z.string().uuid()).optional(),
+});
+
+// Jour de la semaine où le chef d'équipe doit effectuer l'inventaire
+// pour ce fournisseur : 1 = lundi ... 7 = dimanche.
+export const inventoryWeekdaySchema = z.number().int().min(1).max(7);
+
+export const createSupplierEmployeeSchema = z.object({
+  supplierId: z.string().uuid(),
+  userId: z.string().uuid(),
+  inventoryWeekday: inventoryWeekdaySchema.optional(),
+});
+
+export const updateSupplierEmployeeSchema = z.object({
+  inventoryWeekday: inventoryWeekdaySchema.nullable().optional(),
 });

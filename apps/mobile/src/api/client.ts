@@ -15,6 +15,11 @@ import type {
   IncidentReason,
   IncidentStatus,
 } from "@/types/incident";
+import type {
+  CreateSupplierAssignmentInput,
+  Supplier,
+  SupplierAssignment,
+} from "@/types/supplier";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
 
@@ -46,7 +51,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   me: () => request<CurrentUser>("/api/users/me"),
   getLocations: () => request<Location[]>("/api/locations"),
-  getProducts: () => request<CatalogProduct[]>("/api/products"),
+  getProducts: (supplierId?: string) =>
+    request<CatalogProduct[]>(
+      `/api/products${supplierId ? `?supplierId=${supplierId}` : ""}`
+    ),
+  getSuppliers: () => request<Supplier[]>("/api/suppliers"),
 
   ensureDailyInventory: (locationId: string) =>
     request<DailyInventory>("/api/daily-inventories", {
@@ -73,10 +82,14 @@ export const api = {
       body: JSON.stringify({ locationId }),
     }),
 
-  updateMonthlyInventoryItem: (inventoryId: string, productId: string, quantity: number) =>
+  updateMonthlyInventoryItem: (
+    inventoryId: string,
+    productId: string,
+    data: { counterQuantity?: number | null; backstoreQuantity?: number | null }
+  ) =>
     request<MonthlyInventoryItem>(
       `/api/monthly-inventories/${inventoryId}/items/${productId}`,
-      { method: "PATCH", body: JSON.stringify({ quantity }) }
+      { method: "PATCH", body: JSON.stringify(data) }
     ),
 
   submitMonthlyInventory: (inventoryId: string) =>
@@ -114,4 +127,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+
+  getSupplierAssignments: () =>
+    request<SupplierAssignment[]>("/api/supplier-employees"),
+
+  createSupplierAssignment: (data: CreateSupplierAssignmentInput) =>
+    request<SupplierAssignment>("/api/supplier-employees", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  deleteSupplierAssignment: (id: string) =>
+    request(`/api/supplier-employees/${id}`, { method: "DELETE" }),
 };
