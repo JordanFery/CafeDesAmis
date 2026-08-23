@@ -5,7 +5,7 @@ export type InventoryProduct = {
   id: string;
   name: string;
   photoUrl: string | null;
-  unit: "KG" | "LITER" | "UNIT" | "LB";
+  unit: "KG" | "LITER" | "UNIT" | "LB" | "ROLL";
   category: { id: string; name: string };
   suppliers: { supplier: { id: string; name: string } }[];
 };
@@ -39,7 +39,7 @@ export type CatalogProduct = {
   id: string;
   name: string;
   photoUrl: string | null;
-  unit: "KG" | "LITER" | "UNIT" | "LB";
+  unit: "KG" | "LITER" | "UNIT" | "LB" | "ROLL";
   category: { id: string; name: string };
 };
 

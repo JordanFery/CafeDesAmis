@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const locationTypeSchema = z.enum(["CHALET", "PAVILION", "KITCHEN"]);
-export const unitTypeSchema = z.enum(["KG", "LITER", "UNIT", "LB"]);
+export const unitTypeSchema = z.enum(["KG", "LITER", "UNIT", "LB", "ROLL"]);
 
 export const createLocationSchema = z.object({
   type: locationTypeSchema,

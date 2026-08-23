@@ -48,6 +48,7 @@ enum UnitType {
   LITER
   UNIT
   LB
+  ROLL
 }
 
 enum IncidentStatus {
