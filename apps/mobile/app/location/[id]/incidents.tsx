@@ -255,9 +255,29 @@ export default function LocationIncidentsScreen() {
                 <Text style={styles.statusBadge}>{STATUS_LABELS[incident.status]}</Text>
               </View>
               <Text style={styles.cardReason}>{incident.reason.name}</Text>
-              <Text style={styles.cardDescription} numberOfLines={3}>
-                {incident.description}
-              </Text>
+              <Text style={styles.cardDescription}>{incident.description}</Text>
+
+              {incident.recurrence ? (
+                <View style={styles.cardSection}>
+                  <Text style={styles.cardSectionLabel}>Problème récurrent</Text>
+                  <Text style={styles.cardSectionText}>{incident.recurrence}</Text>
+                </View>
+              ) : null}
+
+              {incident.correctiveAction ? (
+                <View style={styles.cardSection}>
+                  <Text style={styles.cardSectionLabel}>Actions correctrices prises</Text>
+                  <Text style={styles.cardSectionText}>{incident.correctiveAction}</Text>
+                </View>
+              ) : null}
+
+              {incident.preventiveAction ? (
+                <View style={styles.cardSection}>
+                  <Text style={styles.cardSectionLabel}>Actions préventives à prendre</Text>
+                  <Text style={styles.cardSectionText}>{incident.preventiveAction}</Text>
+                </View>
+              ) : null}
+
               <Text style={styles.cardMeta}>
                 Rapporté par {incident.reportedBy.firstName} {incident.reportedBy.lastName}
                 {incident.employees.length > 0
@@ -323,8 +343,18 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   cardReason: { fontSize: 15, fontWeight: "700", marginBottom: 4 },
-  cardDescription: { fontSize: 13, color: "#333", marginBottom: 6 },
-  cardMeta: { fontSize: 11, color: "#888" },
+  cardDescription: { fontSize: 13, color: "#333", marginBottom: 8 },
+  cardSection: { marginBottom: 8 },
+  cardSectionLabel: {
+    fontSize: 10.5,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+    color: "#8a5a3b",
+    marginBottom: 2,
+  },
+  cardSectionText: { fontSize: 13, color: "#333" },
+  cardMeta: { fontSize: 11, color: "#888", marginTop: 4 },
   hint: { textAlign: "center", color: "#888", marginTop: 24 },
   form: { padding: 16, paddingBottom: 60, gap: 4 },
   field: { marginBottom: 18 },
