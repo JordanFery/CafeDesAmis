@@ -1,6 +1,6 @@
 export const metadata = {
-  title: "Café des Amis API",
-  description: "API backend pour l'application Café des Amis",
+  title: "Les Amis de la Montagne — API",
+  description: "API backend pour l'application Les Amis de la Montagne",
 };
 
 export default function RootLayout({

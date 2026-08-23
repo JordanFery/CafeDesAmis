@@ -4,6 +4,9 @@
   "workspaces": [
     "apps/*"
   ],
+  "overrides": {
+    "react-native": "0.74.5"
+  },
   "scripts": {
     "dev:api": "npm run dev --workspace apps/api",
     "dev:mobile": "npm run start --workspace apps/mobile",
