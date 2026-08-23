@@ -27,3 +27,28 @@ export type DailyInventory = {
   status: InventoryStatus;
   items: DailyInventoryItem[];
 };
+
+export type MonthlyInventoryItem = {
+  id: string;
+  productId: string;
+  quantity: string;
+  product: InventoryProduct;
+};
+
+export type CatalogProduct = {
+  id: string;
+  name: string;
+  photoUrl: string | null;
+  unit: "KG" | "LITER" | "UNIT" | "LB";
+  category: { id: string; name: string };
+};
+
+export type MonthlyInventory = {
+  id: string;
+  locationId: string;
+  inventoryDate: string;
+  status: InventoryStatus;
+  validatedAt: string | null;
+  validatedById: string | null;
+  items: MonthlyInventoryItem[];
+};

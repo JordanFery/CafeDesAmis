@@ -124,6 +124,9 @@ export default function LocationInventoryScreen() {
         </Pressable>
         <Text style={styles.title}>Inventaire du {inventory.inventoryDate.slice(0, 10)}</Text>
         {isSubmitted ? <Text style={styles.badge}>Envoyé</Text> : null}
+        <Pressable onPress={() => router.push(`/location/${id}/monthly`)}>
+          <Text style={styles.back}>Mensuel ›</Text>
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.list}>

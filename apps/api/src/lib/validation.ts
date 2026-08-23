@@ -58,3 +58,14 @@ export const updateDailyInventoryItemSchema = z.object({
   quantity: z.number().nonnegative().nullable().optional(),
   status: inventoryItemStatusSchema.optional(),
 });
+
+const monthOnlySchema = z.string().regex(/^\d{4}-\d{2}$/, "Format attendu : AAAA-MM");
+
+export const createMonthlyInventorySchema = z.object({
+  locationId: z.string().uuid(),
+  inventoryMonth: monthOnlySchema.optional(),
+});
+
+export const updateMonthlyInventoryItemSchema = z.object({
+  quantity: z.number().nonnegative(),
+});

@@ -1,7 +1,14 @@
 import { supabase } from "@/lib/supabase";
 import type { CurrentUser } from "@/types/user";
 import type { Location } from "@/types/location";
-import type { DailyInventory, DailyInventoryItem, InventoryItemStatus } from "@/types/inventory";
+import type {
+  CatalogProduct,
+  DailyInventory,
+  DailyInventoryItem,
+  InventoryItemStatus,
+  MonthlyInventory,
+  MonthlyInventoryItem,
+} from "@/types/inventory";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
 
@@ -33,6 +40,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   me: () => request<CurrentUser>("/api/users/me"),
   getLocations: () => request<Location[]>("/api/locations"),
+  getProducts: () => request<CatalogProduct[]>("/api/products"),
 
   ensureDailyInventory: (locationId: string) =>
     request<DailyInventory>("/api/daily-inventories", {
@@ -52,4 +60,26 @@ export const api = {
 
   submitDailyInventory: (inventoryId: string) =>
     request(`/api/daily-inventories/${inventoryId}/submit`, { method: "POST" }),
+
+  ensureMonthlyInventory: (locationId: string) =>
+    request<MonthlyInventory>("/api/monthly-inventories", {
+      method: "POST",
+      body: JSON.stringify({ locationId }),
+    }),
+
+  updateMonthlyInventoryItem: (inventoryId: string, productId: string, quantity: number) =>
+    request<MonthlyInventoryItem>(
+      `/api/monthly-inventories/${inventoryId}/items/${productId}`,
+      { method: "PATCH", body: JSON.stringify({ quantity }) }
+    ),
+
+  submitMonthlyInventory: (inventoryId: string) =>
+    request<MonthlyInventory>(`/api/monthly-inventories/${inventoryId}/submit`, {
+      method: "POST",
+    }),
+
+  validateMonthlyInventory: (inventoryId: string) =>
+    request<MonthlyInventory>(`/api/monthly-inventories/${inventoryId}/validate`, {
+      method: "POST",
+    }),
 };
