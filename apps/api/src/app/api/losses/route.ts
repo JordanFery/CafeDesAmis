@@ -80,18 +80,37 @@ export async function POST(request: NextRequest) {
       throw forbidden();
     }
 
-    const { lossDate, ...rest } = parsed.data;
+    const { lossDate, locationId, productId, quantity } = parsed.data;
+    const resolvedLossDate = parseDateOnly(lossDate ?? todayDateOnly());
 
-    const loss = await prisma.loss.create({
-      data: {
-        ...rest,
-        lossDate: parseDateOnly(lossDate ?? todayDateOnly()),
-        reportedById: user.id,
-      },
-      include: lossInclude,
+    // Deux pertes du même produit, au même lieu, le même jour s'additionnent
+    // plutôt que de créer une nouvelle ligne.
+    const existing = await prisma.loss.findFirst({
+      where: { locationId, productId, lossDate: resolvedLossDate, archivedAt: null },
     });
 
-    return NextResponse.json(loss, { status: 201 });
+    const loss = existing
+      ? await prisma.loss.update({
+          where: { id: existing.id },
+          data: {
+            quantity: Number(existing.quantity) + quantity,
+            reportedById: user.id,
+          },
+          include: lossInclude,
+        })
+      : await prisma.loss.create({
+          data: {
+            locationId,
+            productId,
+            quantity,
+            reason: parsed.data.reason,
+            lossDate: resolvedLossDate,
+            reportedById: user.id,
+          },
+          include: lossInclude,
+        });
+
+    return NextResponse.json(loss, { status: existing ? 200 : 201 });
   } catch (error) {
     return handleApiError(error);
   }
