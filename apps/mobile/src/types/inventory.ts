@@ -7,7 +7,13 @@ export type InventoryProduct = {
   photoUrl: string | null;
   unit: "KG" | "LITER" | "UNIT" | "LB" | "ROLL";
   category: { id: string; name: string };
-  suppliers: { supplier: { id: string; name: string } }[];
+  suppliers: {
+    supplier: {
+      id: string;
+      name: string;
+      employees?: { inventoryWeekday: number | null }[];
+    };
+  }[];
 };
 
 export type DailyInventoryItem = {

@@ -13,7 +13,16 @@ const itemInclude = {
           category: true,
           suppliers: {
             where: { isPrimary: true, isActive: true },
-            include: { supplier: true },
+            include: {
+              supplier: {
+                include: {
+                  employees: {
+                    where: { archivedAt: null },
+                    select: { inventoryWeekday: true },
+                  },
+                },
+              },
+            },
             take: 1,
           },
         },

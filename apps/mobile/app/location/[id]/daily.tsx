@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,6 +10,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { api } from "@/api/client";
@@ -16,6 +18,17 @@ import type { DailyInventory, DailyInventoryItem } from "@/types/inventory";
 import type { CurrentUser } from "@/types/user";
 
 const INCIDENT_ROLES = ["TEAM_LEADER", "MANAGEMENT", "ADMIN"];
+
+const WEEKDAY_LABELS: Record<number, string> = {
+  1: "Lundi",
+  2: "Mardi",
+  3: "Mercredi",
+  4: "Jeudi",
+  5: "Vendredi",
+  6: "Samedi",
+  7: "Dimanche",
+};
+const WEEKDAY_OPTIONS = [1, 2, 3, 4, 5, 6, 7];
 
 export default function LocationInventoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -41,16 +54,56 @@ export default function LocationInventoryScreen() {
     load();
   }, [load]);
 
-  const grouped = useMemo(() => {
+  const [weekdayFilter, setWeekdayFilter] = useState<number | "">("");
+  const [supplierFilter, setSupplierFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+
+  const suppliers = useMemo(() => {
     if (!inventory) return [];
-    const byCategory = new Map<string, DailyInventoryItem[]>();
+    const byId = new Map<string, string>();
     for (const item of inventory.items) {
+      const supplier = item.product.suppliers[0]?.supplier;
+      if (supplier) byId.set(supplier.id, supplier.name);
+    }
+    return Array.from(byId.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [inventory]);
+
+  const categories = useMemo(() => {
+    if (!inventory) return [];
+    const byId = new Map<string, string>();
+    for (const item of inventory.items) {
+      byId.set(item.product.category.id, item.product.category.name);
+    }
+    return Array.from(byId.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [inventory]);
+
+  const filteredItems = useMemo(() => {
+    if (!inventory) return [];
+    return inventory.items.filter((item) => {
+      const supplier = item.product.suppliers[0]?.supplier;
+      if (supplierFilter && supplier?.id !== supplierFilter) return false;
+      if (categoryFilter && item.product.category.id !== categoryFilter) return false;
+      if (weekdayFilter) {
+        const weekdays = supplier?.employees?.map((e) => e.inventoryWeekday) ?? [];
+        if (!weekdays.includes(weekdayFilter)) return false;
+      }
+      return true;
+    });
+  }, [inventory, weekdayFilter, supplierFilter, categoryFilter]);
+
+  const grouped = useMemo(() => {
+    const byCategory = new Map<string, DailyInventoryItem[]>();
+    for (const item of filteredItems) {
       const key = item.product.category.name;
       if (!byCategory.has(key)) byCategory.set(key, []);
       byCategory.get(key)!.push(item);
     }
     return Array.from(byCategory.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [inventory]);
+  }, [filteredItems]);
 
   const handleQuantityChange = (productId: string, rawValue: string) => {
     if (!inventory) return;
@@ -140,7 +193,63 @@ export default function LocationInventoryScreen() {
         ) : null}
       </View>
 
+      <View style={styles.filterBar}>
+        <View style={styles.filterField}>
+          <Text style={styles.filterLabel}>Journée</Text>
+          <View style={styles.pickerWrap}>
+            <Picker
+              selectedValue={weekdayFilter}
+              onValueChange={(v) => setWeekdayFilter(v === "" ? "" : Number(v))}
+              mode="dropdown"
+              style={styles.picker}
+            >
+              <Picker.Item label="Toutes" value="" />
+              {WEEKDAY_OPTIONS.map((d) => (
+                <Picker.Item key={d} label={WEEKDAY_LABELS[d]} value={d} />
+              ))}
+            </Picker>
+          </View>
+        </View>
+
+        <View style={styles.filterField}>
+          <Text style={styles.filterLabel}>Fournisseur</Text>
+          <View style={styles.pickerWrap}>
+            <Picker
+              selectedValue={supplierFilter}
+              onValueChange={setSupplierFilter}
+              mode="dropdown"
+              style={styles.picker}
+            >
+              <Picker.Item label="Tous" value="" />
+              {suppliers.map((s) => (
+                <Picker.Item key={s.id} label={s.name} value={s.id} />
+              ))}
+            </Picker>
+          </View>
+        </View>
+
+        <View style={styles.filterField}>
+          <Text style={styles.filterLabel}>Catégorie</Text>
+          <View style={styles.pickerWrap}>
+            <Picker
+              selectedValue={categoryFilter}
+              onValueChange={setCategoryFilter}
+              mode="dropdown"
+              style={styles.picker}
+            >
+              <Picker.Item label="Toutes" value="" />
+              {categories.map((c) => (
+                <Picker.Item key={c.id} label={c.name} value={c.id} />
+              ))}
+            </Picker>
+          </View>
+        </View>
+      </View>
+
       <ScrollView contentContainerStyle={styles.list}>
+        {grouped.length === 0 ? (
+          <Text style={styles.empty}>Aucun article ne correspond à ce filtre.</Text>
+        ) : null}
         {grouped.map(([categoryName, items]) => (
           <View key={categoryName} style={styles.categoryBlock}>
             <Text style={styles.categoryTitle}>{categoryName}</Text>
@@ -205,6 +314,33 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 999,
   },
+  filterBar: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  filterField: { flex: 1, gap: 4 },
+  filterLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+    color: "#8a5a3b",
+  },
+  pickerWrap: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    backgroundColor: "#f4f1ee",
+    overflow: "hidden",
+    justifyContent: "center",
+  },
+  picker: Platform.select({
+    ios: { height: 120 },
+    default: { height: 44 },
+  }) as object,
+  empty: { textAlign: "center", color: "#888", marginTop: 24 },
   list: { padding: 16, paddingBottom: 100 },
   categoryBlock: { marginBottom: 20 },
   categoryTitle: {
