@@ -20,6 +20,7 @@ import type {
   Supplier,
   SupplierAssignment,
 } from "@/types/supplier";
+import type { CreateLossInput, Loss } from "@/types/loss";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
 
@@ -139,4 +140,15 @@ export const api = {
 
   deleteSupplierAssignment: (id: string) =>
     request(`/api/supplier-employees/${id}`, { method: "DELETE" }),
+
+  getLosses: (locationId: string) =>
+    request<Loss[]>(`/api/losses?locationId=${locationId}`),
+
+  createLoss: (data: CreateLossInput) =>
+    request<Loss>("/api/losses", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  deleteLoss: (id: string) => request(`/api/losses/${id}`, { method: "DELETE" }),
 };

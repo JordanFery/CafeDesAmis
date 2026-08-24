@@ -131,3 +131,13 @@ export const createSupplierEmployeeSchema = z.object({
 export const updateSupplierEmployeeSchema = z.object({
   inventoryWeekday: inventoryWeekdaySchema.nullable().optional(),
 });
+
+export const lossReasonSchema = z.enum(["EXPIRED", "DAMAGED", "DROPPED", "OTHER"]);
+
+export const createLossSchema = z.object({
+  locationId: z.string().uuid(),
+  productId: z.string().uuid(),
+  quantity: z.number().positive(),
+  reason: lossReasonSchema,
+  lossDate: dateOnlySchema.optional(),
+});

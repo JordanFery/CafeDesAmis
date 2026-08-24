@@ -186,6 +186,9 @@ export default function LocationInventoryScreen() {
         <Pressable onPress={() => router.push(`/location/${id}/monthly`)}>
           <Text style={styles.back}>Mensuel ›</Text>
         </Pressable>
+        <Pressable onPress={() => router.push(`/location/${id}/losses`)}>
+          <Text style={styles.back}>Pertes ›</Text>
+        </Pressable>
         {currentUser && INCIDENT_ROLES.includes(currentUser.role) ? (
           <Pressable onPress={() => router.push(`/location/${id}/incidents`)}>
             <Text style={styles.back}>Incidents ›</Text>
