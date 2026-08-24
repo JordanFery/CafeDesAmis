@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser, hasLocationAccess } from "@/lib/auth";
 import { handleApiError, forbidden } from "@/lib/errors";
 import { createLossSchema, lossReasonSchema } from "@/lib/validation";
-import { parseDateOnly, todayDateOnly } from "@/lib/dates";
+import { parseDateOnly, parseMonthOnly, todayDateOnly } from "@/lib/dates";
 
 const lossInclude = {
   product: { include: { category: true } },
@@ -81,9 +81,9 @@ export async function POST(request: NextRequest) {
     }
 
     const { lossDate, locationId, productId, quantity } = parsed.data;
-    const resolvedLossDate = parseDateOnly(lossDate ?? todayDateOnly());
+    const resolvedLossDate = parseMonthOnly((lossDate ?? todayDateOnly()).slice(0, 7));
 
-    // Deux pertes du même produit, au même lieu, le même jour s'additionnent
+    // Deux pertes du même produit, au même lieu, dans le même mois s'additionnent
     // plutôt que de créer une nouvelle ligne.
     const existing = await prisma.loss.findFirst({
       where: { locationId, productId, lossDate: resolvedLossDate, archivedAt: null },

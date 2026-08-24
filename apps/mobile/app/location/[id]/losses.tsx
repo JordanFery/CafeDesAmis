@@ -197,7 +197,7 @@ export default function LocationLossesScreen() {
                 <Text style={styles.lossName}>{loss.product.name}</Text>
                 <Text style={styles.lossMeta}>
                   {loss.quantity} {loss.product.unit.toLowerCase()} · {REASON_LABELS[loss.reason]}{" "}
-                  · {loss.lossDate.slice(0, 10)}
+                  · {loss.lossDate.slice(0, 7)}
                 </Text>
                 <Text style={styles.lossMeta}>
                   Rapporté par {loss.reportedBy.firstName} {loss.reportedBy.lastName}
