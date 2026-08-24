@@ -7,6 +7,7 @@ import { api } from "@/api/client";
 import { LOCATION_LABELS } from "@/constants/locations";
 import type { CurrentUser } from "@/types/user";
 import type { Location } from "@/types/location";
+import { colors } from "@/constants/theme";
 
 export default function HomeScreen() {
   const { session, loading: authLoading, signOut } = useAuth();
@@ -30,7 +31,7 @@ export default function HomeScreen() {
   if (authLoading) {
     return (
       <SafeAreaView style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.secondary} />
       </SafeAreaView>
     );
   }
@@ -42,7 +43,7 @@ export default function HomeScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.secondary} />
       </SafeAreaView>
     );
   }
@@ -111,15 +112,15 @@ const styles = StyleSheet.create({
   },
   greeting: { fontSize: 16, fontWeight: "600" },
   headerActions: { flexDirection: "row", alignItems: "center", gap: 16 },
-  logout: { color: "#8a5a3b", fontWeight: "500" },
+  logout: { color: colors.secondary, fontWeight: "500" },
   list: { padding: 16 },
   card: {
     padding: 16,
     marginBottom: 12,
     borderRadius: 12,
-    backgroundColor: "#f4f1ee",
+    backgroundColor: colors.surfaceAlt,
   },
   cardTitle: { fontSize: 18, fontWeight: "600" },
-  empty: { textAlign: "center", marginTop: 32, color: "#888" },
+  empty: { textAlign: "center", marginTop: 32, color: colors.inkMuted },
   error: { color: "red" },
 });

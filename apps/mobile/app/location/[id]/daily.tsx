@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { api } from "@/api/client";
 import type { DailyInventory, DailyInventoryItem } from "@/types/inventory";
 import type { CurrentUser } from "@/types/user";
+import { colors } from "@/constants/theme";
 
 const INCIDENT_ROLES = ["TEAM_LEADER", "MANAGEMENT", "ADMIN"];
 
@@ -160,7 +161,7 @@ export default function LocationInventoryScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.secondary} />
       </SafeAreaView>
     );
   }
@@ -306,13 +307,13 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
-  back: { color: "#8a5a3b", fontWeight: "600", fontSize: 16 },
+  back: { color: colors.secondary, fontWeight: "600", fontSize: 16 },
   title: { fontSize: 16, fontWeight: "600", flex: 1 },
   badge: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#2f7d3c",
-    backgroundColor: "#e4f4e6",
+    color: colors.success,
+    backgroundColor: colors.successSoft,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
@@ -329,13 +330,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.3,
-    color: "#8a5a3b",
+    color: colors.secondary,
   },
   pickerWrap: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.border,
     borderRadius: 10,
-    backgroundColor: "#f4f1ee",
+    backgroundColor: colors.surfaceAlt,
     overflow: "hidden",
     justifyContent: "center",
   },
@@ -343,13 +344,13 @@ const styles = StyleSheet.create({
     ios: { height: 120 },
     default: { height: 44 },
   }) as object,
-  empty: { textAlign: "center", color: "#888", marginTop: 24 },
+  empty: { textAlign: "center", color: colors.inkMuted, marginTop: 24 },
   list: { padding: 16, paddingBottom: 100 },
   categoryBlock: { marginBottom: 20 },
   categoryTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#8a5a3b",
+    color: colors.secondary,
     textTransform: "uppercase",
     marginBottom: 8,
   },
@@ -359,15 +360,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0eeec",
+    borderBottomColor: colors.divider,
   },
   rowInfo: { flex: 1, paddingRight: 12 },
   productName: { fontSize: 15, fontWeight: "600" },
-  productMeta: { fontSize: 12, color: "#888", marginTop: 2 },
+  productMeta: { fontSize: 12, color: colors.inkMuted, marginTop: 2 },
   input: {
     width: 70,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 8,
     textAlign: "center",
@@ -377,7 +378,7 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     bottom: 24,
-    backgroundColor: "#8a5a3b",
+    backgroundColor: colors.secondary,
     borderRadius: 8,
     padding: 16,
     alignItems: "center",

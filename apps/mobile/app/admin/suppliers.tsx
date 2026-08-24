@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { api } from "@/api/client";
 import type { CurrentUser, TeamMember } from "@/types/user";
 import type { Supplier, SupplierAssignment } from "@/types/supplier";
+import { colors } from "@/constants/theme";
 
 const WEEKDAY_LABELS: Record<number, string> = {
   1: "Lundi",
@@ -123,7 +124,7 @@ export default function SupplierAssignmentsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.secondary} />
       </SafeAreaView>
     );
   }
@@ -251,28 +252,28 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
-  back: { color: "#8a5a3b", fontWeight: "600", fontSize: 15 },
+  back: { color: colors.secondary, fontWeight: "600", fontSize: 15 },
   title: { fontSize: 16, fontWeight: "700", flex: 1 },
   content: { padding: 16, paddingBottom: 40 },
   formCard: {
-    backgroundColor: "#f4f1ee",
+    backgroundColor: colors.surfaceAlt,
     borderRadius: 14,
     padding: 16,
     marginBottom: 24,
     gap: 6,
   },
-  formTitle: { fontSize: 14, fontWeight: "700", marginBottom: 6, color: "#8a5a3b" },
+  formTitle: { fontSize: 14, fontWeight: "700", marginBottom: 6, color: colors.secondary },
   fieldLabel: {
     fontSize: 11,
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.3,
-    color: "#8a5a3b",
+    color: colors.secondary,
     marginTop: 8,
   },
   pickerWrap: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.border,
     borderRadius: 10,
     backgroundColor: "#fff",
     overflow: "hidden",
@@ -283,7 +284,7 @@ const styles = StyleSheet.create({
     default: { height: 44 },
   }) as object,
   submitButton: {
-    backgroundColor: "#8a5a3b",
+    backgroundColor: colors.secondary,
     borderRadius: 10,
     padding: 14,
     alignItems: "center",
@@ -295,7 +296,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     textTransform: "uppercase",
-    color: "#8a5a3b",
+    color: colors.secondary,
     marginBottom: 8,
   },
   assignmentRow: {
@@ -304,12 +305,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0eeec",
+    borderBottomColor: colors.divider,
   },
   assignmentInfo: {},
   assignmentName: { fontSize: 14, fontWeight: "600" },
-  assignmentDay: { fontSize: 12, color: "#888", marginTop: 2 },
-  removeText: { color: "#b33", fontWeight: "600", fontSize: 13 },
-  hint: { textAlign: "center", color: "#888", marginTop: 24 },
+  assignmentDay: { fontSize: 12, color: colors.inkMuted, marginTop: 2 },
+  removeText: { color: colors.danger, fontWeight: "600", fontSize: 13 },
+  hint: { textAlign: "center", color: colors.inkMuted, marginTop: 24 },
   error: { color: "red" },
 });

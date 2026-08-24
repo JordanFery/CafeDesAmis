@@ -17,6 +17,7 @@ import { api } from "@/api/client";
 import type { CatalogProduct, MonthlyInventory } from "@/types/inventory";
 import type { CurrentUser } from "@/types/user";
 import type { Supplier } from "@/types/supplier";
+import { colors } from "@/constants/theme";
 
 type Quantities = { counter: string; backstore: string };
 
@@ -136,7 +137,7 @@ export default function LocationMonthlyInventoryScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.secondary} />
       </SafeAreaView>
     );
   }
@@ -260,18 +261,18 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
-  back: { color: "#8a5a3b", fontWeight: "600", fontSize: 15 },
+  back: { color: colors.secondary, fontWeight: "600", fontSize: 15 },
   title: { fontSize: 14, fontWeight: "600", flex: 1 },
   badge: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#2f7d3c",
-    backgroundColor: "#e4f4e6",
+    color: colors.success,
+    backgroundColor: colors.successSoft,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
   },
-  badgeValidated: { color: "#8a5a3b", backgroundColor: "#f4ece3" },
+  badgeValidated: { color: colors.secondary, backgroundColor: colors.secondarySoft },
   filterBar: {
     paddingHorizontal: 16,
     paddingBottom: 8,
@@ -282,13 +283,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.3,
-    color: "#8a5a3b",
+    color: colors.secondary,
   },
   pickerWrap: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.border,
     borderRadius: 10,
-    backgroundColor: "#f4f1ee",
+    backgroundColor: colors.surfaceAlt,
     overflow: "hidden",
     justifyContent: "center",
   },
@@ -302,13 +303,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0eeec",
+    borderBottomColor: colors.divider,
   },
   columnHeaderText: {
     fontSize: 10,
     fontWeight: "700",
     textTransform: "uppercase",
-    color: "#888",
+    color: colors.inkMuted,
     textAlign: "center",
   },
   list: { padding: 16, paddingBottom: 100 },
@@ -316,7 +317,7 @@ const styles = StyleSheet.create({
   categoryTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#8a5a3b",
+    color: colors.secondary,
     textTransform: "uppercase",
     marginBottom: 8,
   },
@@ -325,7 +326,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0eeec",
+    borderBottomColor: colors.divider,
     gap: 6,
   },
   productNameCol: { flex: 1.6, paddingRight: 6 },
@@ -333,7 +334,7 @@ const styles = StyleSheet.create({
   productName: { fontSize: 13, fontWeight: "600" },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 6,
     textAlign: "center",
@@ -343,14 +344,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 13,
     fontWeight: "700",
-    color: "#8a5a3b",
+    color: colors.secondary,
   },
   submitButton: {
     position: "absolute",
     left: 16,
     right: 16,
     bottom: 24,
-    backgroundColor: "#8a5a3b",
+    backgroundColor: colors.secondary,
     borderRadius: 8,
     padding: 16,
     alignItems: "center",

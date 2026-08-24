@@ -10,6 +10,7 @@ import {
 import { Redirect, router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
+import { colors } from "@/constants/theme";
 
 export default function LoginScreen() {
   const { session, loading: authLoading, signIn } = useAuth();
@@ -21,7 +22,7 @@ export default function LoginScreen() {
   if (authLoading) {
     return (
       <SafeAreaView style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.secondary} />
       </SafeAreaView>
     );
   }
@@ -51,7 +52,7 @@ export default function LoginScreen() {
       <TextInput
         style={styles.input}
         placeholder="Courriel"
-        placeholderTextColor="#999"
+        placeholderTextColor={colors.placeholder}
         autoCapitalize="none"
         autoCorrect={false}
         keyboardType="email-address"
@@ -61,7 +62,7 @@ export default function LoginScreen() {
       <TextInput
         style={styles.input}
         placeholder="Mot de passe"
-        placeholderTextColor="#999"
+        placeholderTextColor={colors.placeholder}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
@@ -90,13 +91,13 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: "700", marginBottom: 32, textAlign: "center" },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
   },
   button: {
-    backgroundColor: "#8a5a3b",
+    backgroundColor: colors.secondary,
     borderRadius: 8,
     padding: 14,
     alignItems: "center",

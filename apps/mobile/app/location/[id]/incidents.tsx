@@ -19,6 +19,7 @@ import type { Location } from "@/types/location";
 import type { TeamMember } from "@/types/user";
 import { todayDateOnly } from "@/lib/dates";
 import { LOCATION_LABELS } from "@/constants/locations";
+import { colors } from "@/constants/theme";
 
 const STATUS_LABELS: Record<IncidentStatus, string> = {
   NEW: "Nouveau",
@@ -356,7 +357,7 @@ export default function LocationIncidentsScreen() {
             ) : null}
 
             {loadingIncidents ? (
-              <ActivityIndicator size="large" style={{ marginTop: 24 }} />
+              <ActivityIndicator size="large" color={colors.secondary} style={{ marginTop: 24 }} />
             ) : incidents.length === 0 ? (
               <Text style={styles.hint}>Aucun rapport ne correspond à ce filtre.</Text>
             ) : (
@@ -427,13 +428,13 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
-  back: { color: "#8a5a3b", fontWeight: "600", fontSize: 15 },
+  back: { color: colors.secondary, fontWeight: "600", fontSize: 15 },
   title: { fontSize: 16, fontWeight: "700", flex: 1, textAlign: "center" },
   filterBar: {
     paddingHorizontal: 16,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0eeec",
+    borderBottomColor: colors.divider,
     gap: 8,
   },
   filterField: { gap: 4 },
@@ -442,13 +443,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.3,
-    color: "#8a5a3b",
+    color: colors.secondary,
   },
   pickerWrap: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.border,
     borderRadius: 10,
-    backgroundColor: "#f4f1ee",
+    backgroundColor: colors.surfaceAlt,
     overflow: "hidden",
     justifyContent: "center",
   },
@@ -465,7 +466,7 @@ const styles = StyleSheet.create({
   },
   historyTitle: { fontSize: 14, fontWeight: "700", flex: 1 },
   historyNewButton: {
-    backgroundColor: "#8a5a3b",
+    backgroundColor: colors.secondary,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -475,7 +476,7 @@ const styles = StyleSheet.create({
   card: {
     padding: 16,
     borderRadius: 12,
-    backgroundColor: "#f4f1ee",
+    backgroundColor: colors.surfaceAlt,
     marginBottom: 12,
   },
   cardHeader: {
@@ -487,31 +488,31 @@ const styles = StyleSheet.create({
   cardDate: {
     fontFamily: "monospace",
     fontSize: 12,
-    color: "#888",
+    color: colors.inkMuted,
   },
   statusBadge: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#8a5a3b",
-    backgroundColor: "#efe0d2",
+    color: colors.secondary,
+    backgroundColor: colors.secondarySoft,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
   },
   cardReason: { fontSize: 15, fontWeight: "700", marginBottom: 4 },
-  cardDescription: { fontSize: 13, color: "#333", marginBottom: 8 },
+  cardDescription: { fontSize: 13, color: colors.ink, marginBottom: 8 },
   cardSection: { marginBottom: 8 },
   cardSectionLabel: {
     fontSize: 10.5,
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.3,
-    color: "#8a5a3b",
+    color: colors.secondary,
     marginBottom: 2,
   },
-  cardSectionText: { fontSize: 13, color: "#333" },
-  cardMeta: { fontSize: 11, color: "#888", marginTop: 4 },
-  hint: { textAlign: "center", color: "#888", marginTop: 24 },
+  cardSectionText: { fontSize: 13, color: colors.ink },
+  cardMeta: { fontSize: 11, color: colors.inkMuted, marginTop: 4 },
+  hint: { textAlign: "center", color: colors.inkMuted, marginTop: 24 },
   form: { padding: 16, paddingBottom: 60, gap: 4 },
   field: { marginBottom: 18 },
   fieldLabel: {
@@ -519,12 +520,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.4,
-    color: "#8a5a3b",
+    color: colors.secondary,
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.border,
     borderRadius: 10,
     padding: 12,
     fontSize: 14,
@@ -537,14 +538,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.border,
     backgroundColor: "#fff",
   },
-  chipSelected: { backgroundColor: "#8a5a3b", borderColor: "#8a5a3b" },
-  chipText: { fontSize: 13, color: "#333" },
+  chipSelected: { backgroundColor: colors.secondary, borderColor: colors.secondary },
+  chipText: { fontSize: 13, color: colors.ink },
   chipTextSelected: { color: "#fff", fontWeight: "600" },
   submitButton: {
-    backgroundColor: "#8a5a3b",
+    backgroundColor: colors.secondary,
     borderRadius: 10,
     padding: 16,
     alignItems: "center",
