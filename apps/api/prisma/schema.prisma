@@ -1,0 +1,1071 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum UserRole {
+  EMPLOYEE
+  TEAM_LEADER
+  MANAGEMENT
+  ADMIN
+}
+
+enum LocationType {
+  CHALET
+  PAVILION
+  KITCHEN
+}
+
+enum InventoryStatus {
+  DRAFT
+  SUBMITTED
+  ARCHIVED
+}
+
+enum InventoryItemStatus {
+  CONTROLLED
+  NOT_CONTROLLED
+}
+
+enum OrderStatus {
+  TO_PROCESS
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+enum UnitType {
+  KG
+  LITER
+  UNIT
+  LB
+  ROLL
+}
+
+enum IncidentStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum IncidentReasonType {
+  BEHAVIOR
+  LATE_ABSENCE
+  CONFLICT
+  PROCEDURE_NON_COMPLIANCE
+  CUSTOMER_ISSUE
+  OTHER
+}
+
+enum NotificationType {
+  ORDER_REMINDER
+  INVENTORY_REMINDER
+  INVENTORY_UPDATE
+  INVENTORY_MISSING
+  FOLLOW_UP_ISSUE
+  TASK_REMINDER
+  TASK_OVERDUE
+  INCIDENT_CREATED
+  INCIDENT_UPDATED
+  COMMENT_CREATED
+  COMMENT_REPLY
+  PROCEDURE_INCOMPLETE
+  SYSTEM
+}
+
+enum NotificationChannel {
+  IN_APP
+  PUSH
+}
+
+enum LossReason {
+  EXPIRED
+  DAMAGED
+  DROPPED
+  OTHER
+}
+
+enum ProcedureType {
+  OPENING
+  CLOSING
+}
+
+enum ConversationMessageType {
+  MESSAGE
+  SYSTEM
+}
+
+// ============================================================
+// USER / AUTH
+// Supabase Auth reste responsable du mot de passe.
+// authUserId correspond à auth.users.id.
+// ============================================================
+
+model User {
+  id         String   @id @default(uuid())
+  authUserId String   @unique
+  email      String   @unique
+  firstName  String
+  lastName   String
+  initials   String
+  role       UserRole
+  isActive   Boolean  @default(true)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  archivedAt DateTime?
+
+  locations UserLocation[]
+
+  supplierAssignments SupplierEmployee[]
+
+  // Inventaires
+  dailyInventoriesCreated   DailyInventory[]           @relation("DailyInventoryCreator")
+  inventorySubmissions      DailyInventorySubmission[]
+  monthlyInventoriesCreated MonthlyInventory[]         @relation("MonthlyInventoryCreator")
+
+  // Incidents
+  incidentsReported Incident[]         @relation("IncidentReporter")
+  incidentsInvolved IncidentEmployee[]
+
+  // Suivi quotidien
+  dailyFollowUps DailyFollowUp[]
+
+  // Pertes
+  losses Loss[]
+
+  // Tâches
+  taskCompletions TaskCompletion[]
+
+  // Procédures
+  procedureChecklists      ProcedureChecklist[]
+  procedureStepCompletions ProcedureStepCompletion[]
+
+  // Commentaires
+  messages Message[]
+
+  // Notifications
+  notifications Notification[]
+
+  // Historique
+  orderStatusChanges OrderStatusHistory[]
+  auditLogs          AuditLog[]
+
+  // Map
+  mapPositionsCreated LocationMapPosition[] @relation("MapPositionCreator")
+
+  @@index([role])
+  @@index([isActive])
+}
+
+// ============================================================
+// LOCATIONS
+// ============================================================
+
+model Location {
+  id   String       @id @default(uuid())
+  type LocationType @unique
+  name String
+
+  isActive   Boolean   @default(true)
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users UserLocation[]
+
+  supplierAssignments SupplierLocation[]
+
+  products ProductLocation[]
+
+  dailyInventories   DailyInventory[]
+  monthlyInventories MonthlyInventory[]
+
+  orderSchedules OrderSchedule[]
+  orders         Order[]
+
+  incidents      Incident[]
+  dailyFollowUps DailyFollowUp[]
+  losses         Loss[]
+
+  weeklyTasks   WeeklyTask[]
+  taskTemplates TaskTemplate[]
+
+  procedures          Procedure[]
+  procedureChecklists ProcedureChecklist[]
+
+  conversation LocationConversation?
+
+  mapPositions LocationMapPosition[]
+
+  @@index([isActive])
+}
+
+// ============================================================
+// USER ↔ LOCATION
+// Permet de déterminer les accès.
+// Un chef d'équipe ne doit avoir qu'un seul lieu.
+// ============================================================
+
+model UserLocation {
+  id String @id @default(uuid())
+
+  userId     String
+  locationId String
+
+  createdAt  DateTime  @default(now())
+  archivedAt DateTime?
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, locationId])
+  @@index([locationId])
+}
+
+// ============================================================
+// SUPPLIERS
+// ============================================================
+
+model Supplier {
+  id   String @id @default(uuid())
+  name String
+
+  notes String?
+
+  isActive   Boolean   @default(true)
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employees SupplierEmployee[]
+  locations SupplierLocation[]
+  products  ProductSupplier[]
+
+  orderSchedules OrderSchedule[]
+  orders         Order[]
+
+  @@index([name])
+  @@index([isActive])
+}
+
+// Fournisseur ↔ employé responsable
+model SupplierEmployee {
+  id String @id @default(uuid())
+
+  supplierId String
+  userId     String
+
+  // Jour de la semaine où le chef d'équipe assigné doit effectuer
+  // l'inventaire quotidien pour ce fournisseur (1 = lundi ... 7 = dimanche).
+  inventoryWeekday Int?
+
+  createdAt  DateTime  @default(now())
+  archivedAt DateTime?
+
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([supplierId, userId])
+  @@index([userId])
+}
+
+// Fournisseur ↔ lieu
+model SupplierLocation {
+  id String @id @default(uuid())
+
+  supplierId String
+  locationId String
+
+  createdAt  DateTime  @default(now())
+  archivedAt DateTime?
+
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  @@unique([supplierId, locationId])
+  @@index([locationId])
+}
+
+// ============================================================
+// ORDER SCHEDULE
+// Jour / heure de commande et livraison
+// ============================================================
+
+model OrderSchedule {
+  id String @id @default(uuid())
+
+  supplierId String
+  locationId String?
+
+  orderWeekday  Int
+  orderDeadline String?
+
+  deliveryWeekday Int?
+  deliveryTime    String?
+
+  notes String?
+
+  isActive   Boolean   @default(true)
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  supplier Supplier  @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  location Location? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  @@index([supplierId])
+  @@index([locationId])
+}
+
+// ============================================================
+// PRODUCT / CATEGORY
+// ============================================================
+
+model Category {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+
+  isActive   Boolean   @default(true)
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+
+  @@unique([name])
+}
+
+model Product {
+  id String @id @default(uuid())
+
+  name     String
+  photoUrl String?
+
+  categoryId String
+  unit       UnitType
+
+  stockMinimum Decimal @db.Decimal(10, 3)
+
+  isActive   Boolean   @default(true)
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  suppliers ProductSupplier[]
+  locations ProductLocation[]
+
+  dailyInventoryItems   DailyInventoryItem[]
+  monthlyInventoryItems MonthlyInventoryItem[]
+
+  orderItems OrderItem[]
+  losses     Loss[]
+
+  mapPosition LocationMapPosition?
+
+  @@index([name])
+  @@index([categoryId])
+  @@index([isActive])
+}
+
+// Produit ↔ fournisseur
+// Permet d'avoir des informations différentes selon le fournisseur.
+model ProductSupplier {
+  id String @id @default(uuid())
+
+  productId  String
+  supplierId String
+
+  isPrimary Boolean @default(false)
+
+  supplierUnit UnitType
+  unitsPerCase Decimal? @db.Decimal(10, 3)
+
+  notes String?
+
+  isActive   Boolean   @default(true)
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+
+  @@unique([productId, supplierId])
+  @@index([supplierId])
+}
+
+// Produit ↔ lieu
+// Permet un seuil différent par lieu.
+model ProductLocation {
+  id String @id @default(uuid())
+
+  productId  String
+  locationId String
+
+  stockMinimum Decimal @db.Decimal(10, 3)
+
+  isActive   Boolean   @default(true)
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  @@unique([productId, locationId])
+  @@index([locationId])
+}
+
+// ============================================================
+// DAILY INVENTORY
+// ============================================================
+
+model DailyInventory {
+  id String @id @default(uuid())
+
+  locationId  String
+  createdById String
+
+  inventoryDate DateTime
+
+  status InventoryStatus @default(DRAFT)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  archivedAt DateTime?
+
+  location  Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  createdBy User     @relation("DailyInventoryCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  items       DailyInventoryItem[]
+  submissions DailyInventorySubmission[]
+
+  @@unique([locationId, inventoryDate])
+  @@index([inventoryDate])
+  @@index([locationId])
+}
+
+model DailyInventoryItem {
+  id String @id @default(uuid())
+
+  inventoryId String
+  productId   String
+
+  status InventoryItemStatus @default(NOT_CONTROLLED)
+
+  quantity Decimal? @db.Decimal(10, 3)
+
+  stockMinimum   Decimal  @db.Decimal(10, 3)
+  suggestedOrder Decimal? @db.Decimal(10, 3)
+
+  updatedAt DateTime @updatedAt
+
+  inventory DailyInventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  product   Product        @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([inventoryId, productId])
+  @@index([productId])
+}
+
+// Chaque envoi représente une mise à jour.
+// Une mise à jour ne modifie que les lignes envoyées.
+model DailyInventorySubmission {
+  id String @id @default(uuid())
+
+  inventoryId   String
+  submittedById String
+
+  submittedAt DateTime @default(now())
+
+  inventory   DailyInventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  submittedBy User           @relation(fields: [submittedById], references: [id], onDelete: Restrict)
+
+  @@index([inventoryId])
+  @@index([submittedAt])
+}
+
+// ============================================================
+// MONTHLY INVENTORY
+// ============================================================
+
+model MonthlyInventory {
+  id String @id @default(uuid())
+
+  locationId  String
+  createdById String
+
+  inventoryDate DateTime
+
+  status InventoryStatus @default(DRAFT)
+
+  validatedAt   DateTime?
+  validatedById String?
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  archivedAt DateTime?
+
+  location  Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  createdBy User     @relation("MonthlyInventoryCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  items MonthlyInventoryItem[]
+
+  @@unique([locationId, inventoryDate])
+  @@index([inventoryDate])
+}
+
+model MonthlyInventoryItem {
+  id String @id @default(uuid())
+
+  inventoryId String
+  productId   String
+
+  // Compté séparément par emplacement ; quantity = counterQuantity + backstoreQuantity,
+  // calculé automatiquement par l'API à chaque écriture.
+  counterQuantity   Decimal? @db.Decimal(10, 3)
+  backstoreQuantity Decimal? @db.Decimal(10, 3)
+  quantity          Decimal  @db.Decimal(10, 3)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inventory MonthlyInventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  product   Product          @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([inventoryId, productId])
+}
+
+// ============================================================
+// ORDERS
+// ============================================================
+
+model Order {
+  id String @id @default(uuid())
+
+  supplierId String
+  locationId String
+
+  orderDate DateTime
+  status    OrderStatus @default(TO_PROCESS)
+
+  notes String?
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  archivedAt DateTime?
+
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  items         OrderItem[]
+  statusHistory OrderStatusHistory[]
+
+  @@index([supplierId])
+  @@index([locationId])
+  @@index([orderDate])
+}
+
+model OrderItem {
+  id String @id @default(uuid())
+
+  orderId   String
+  productId String
+
+  quantity Decimal @db.Decimal(10, 3)
+
+  createdAt DateTime @default(now())
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, productId])
+}
+
+model OrderStatusHistory {
+  id String @id @default(uuid())
+
+  orderId     String
+  changedById String
+
+  oldStatus OrderStatus?
+  newStatus OrderStatus
+
+  changedAt DateTime @default(now())
+
+  order     Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  changedBy User  @relation(fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+}
+
+// ============================================================
+// INCIDENTS
+// ============================================================
+
+model IncidentReason {
+  id   String             @id @default(uuid())
+  name String
+  type IncidentReasonType
+
+  isActive   Boolean   @default(true)
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  incidents Incident[]
+
+  @@unique([name])
+}
+
+model Incident {
+  id String @id @default(uuid())
+
+  locationId   String
+  reportedById String
+  reasonId     String
+
+  incidentDate DateTime
+
+  description String
+  recurrence  String?
+
+  preventiveAction String?
+  correctiveAction String?
+
+  status IncidentStatus @default(NEW)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  archivedAt DateTime?
+
+  location   Location       @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  reportedBy User           @relation("IncidentReporter", fields: [reportedById], references: [id], onDelete: Restrict)
+  reason     IncidentReason @relation(fields: [reasonId], references: [id], onDelete: Restrict)
+
+  employees IncidentEmployee[]
+
+  @@index([locationId])
+  @@index([incidentDate])
+  @@index([reportedById])
+}
+
+model IncidentEmployee {
+  id String @id @default(uuid())
+
+  incidentId String
+  userId     String
+
+  createdAt DateTime @default(now())
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([incidentId, userId])
+}
+
+// ============================================================
+// DAILY FOLLOW-UP
+// ============================================================
+
+model DailyFollowUp {
+  id String @id @default(uuid())
+
+  locationId    String
+  completedById String
+
+  followUpDate DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  completedBy User     @relation(fields: [completedById], references: [id], onDelete: Restrict)
+
+  answers DailyFollowUpAnswer[]
+
+  @@unique([locationId, followUpDate])
+}
+
+model FollowUpQuestion {
+  id String @id @default(uuid())
+
+  currentVersionId String? @unique
+
+  isActive   Boolean   @default(true)
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  versions FollowUpQuestionVersion[]
+  answers  DailyFollowUpAnswer[]
+}
+
+model FollowUpQuestionVersion {
+  id String @id @default(uuid())
+
+  questionId String
+
+  question    String
+  description String?
+
+  version Int
+
+  createdAt DateTime @default(now())
+
+  questionRef         FollowUpQuestion      @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  DailyFollowUpAnswer DailyFollowUpAnswer[]
+
+  @@unique([questionId, version])
+}
+
+model DailyFollowUpAnswer {
+  id String @id @default(uuid())
+
+  followUpId        String
+  questionId        String
+  questionVersionId String
+
+  booleanValue Boolean?
+  textValue    String?
+  numberValue  Decimal? @db.Decimal(10, 3)
+  choiceValue  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  followUp        DailyFollowUp           @relation(fields: [followUpId], references: [id], onDelete: Cascade)
+  question        FollowUpQuestion        @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  questionVersion FollowUpQuestionVersion @relation(fields: [questionVersionId], references: [id], onDelete: Restrict)
+
+  @@unique([followUpId, questionId])
+}
+
+// ============================================================
+// LOSSES
+// ============================================================
+
+model Loss {
+  id String @id @default(uuid())
+
+  productId    String
+  locationId   String
+  reportedById String
+
+  quantity Decimal    @db.Decimal(10, 3)
+  reason   LossReason
+
+  lossDate DateTime
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  archivedAt DateTime?
+
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  reportedBy User     @relation(fields: [reportedById], references: [id], onDelete: Restrict)
+
+  @@index([locationId])
+  @@index([lossDate])
+  @@index([productId])
+}
+
+// ============================================================
+// WEEKLY TASKS
+// ============================================================
+
+model TaskTemplate {
+  id String @id @default(uuid())
+
+  locationId String
+
+  description   String
+  floorLocation String
+
+  isActive   Boolean   @default(true)
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  weeklyTasks WeeklyTask[]
+
+  @@index([locationId])
+}
+
+model WeeklyTask {
+  id String @id @default(uuid())
+
+  templateId String
+  locationId String
+
+  weekStartDate DateTime
+  dueDate       DateTime
+
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  template TaskTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  location Location     @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  completions TaskCompletion[]
+
+  @@unique([templateId, weekStartDate])
+  @@index([locationId])
+  @@index([dueDate])
+}
+
+model TaskCompletion {
+  id String @id @default(uuid())
+
+  weeklyTaskId  String
+  completedById String
+
+  completedAt DateTime @default(now())
+
+  weeklyTask  WeeklyTask @relation(fields: [weeklyTaskId], references: [id], onDelete: Cascade)
+  completedBy User       @relation(fields: [completedById], references: [id], onDelete: Restrict)
+
+  @@unique([weeklyTaskId])
+}
+
+// ============================================================
+// PROCEDURES
+// ============================================================
+
+model Procedure {
+  id String @id @default(uuid())
+
+  locationId String
+  type       ProcedureType
+
+  name        String
+  description String?
+
+  isActive   Boolean   @default(true)
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  steps      ProcedureStep[]
+  checklists ProcedureChecklist[]
+
+  @@unique([locationId, type])
+}
+
+model ProcedureStep {
+  id String @id @default(uuid())
+
+  procedureId String
+
+  order       Int
+  description String
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  procedure Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
+
+  completions ProcedureStepCompletion[]
+
+  @@unique([procedureId, order])
+}
+
+model ProcedureChecklist {
+  id String @id @default(uuid())
+
+  procedureId   String
+  locationId    String
+  completedById String
+
+  checklistDate DateTime
+
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  procedure   Procedure @relation(fields: [procedureId], references: [id], onDelete: Restrict)
+  location    Location  @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  completedBy User      @relation(fields: [completedById], references: [id], onDelete: Restrict)
+
+  stepCompletions ProcedureStepCompletion[]
+
+  @@unique([procedureId, checklistDate])
+}
+
+model ProcedureStepCompletion {
+  id String @id @default(uuid())
+
+  checklistId   String
+  stepId        String
+  completedById String
+
+  completedAt DateTime @default(now())
+
+  checklist   ProcedureChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  step        ProcedureStep      @relation(fields: [stepId], references: [id], onDelete: Restrict)
+  completedBy User               @relation(fields: [completedById], references: [id], onDelete: Restrict)
+
+  @@unique([checklistId, stepId])
+}
+
+// ============================================================
+// LOCATION MAP
+// ============================================================
+
+model LocationMapPosition {
+  id String @id @default(uuid())
+
+  locationId String
+  productId  String @unique
+
+  xPosition Decimal @db.Decimal(10, 4)
+  yPosition Decimal @db.Decimal(10, 4)
+
+  label String?
+
+  createdById String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  location  Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  createdBy User     @relation("MapPositionCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([locationId, productId])
+  @@index([locationId])
+}
+
+// ============================================================
+// COMMENTS / CONVERSATIONS
+// ============================================================
+
+model LocationConversation {
+  id String @id @default(uuid())
+
+  locationId String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  messages Message[]
+}
+
+model Message {
+  id String @id @default(uuid())
+
+  conversationId String
+  authorId       String
+
+  parentMessageId String?
+
+  type ConversationMessageType @default(MESSAGE)
+
+  content String
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  archivedAt DateTime?
+
+  conversation LocationConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  author       User                 @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  parentMessage Message?  @relation("MessageReplies", fields: [parentMessageId], references: [id], onDelete: Restrict)
+  replies       Message[] @relation("MessageReplies")
+
+  @@index([conversationId])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+model Notification {
+  id String @id @default(uuid())
+
+  userId String
+
+  type    NotificationType
+  channel NotificationChannel
+
+  title   String
+  message String
+
+  relatedType String?
+  relatedId   String?
+
+  isRead Boolean   @default(false)
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@index([type])
+}
+
+// ============================================================
+// AUDIT / ARCHIVING
+// ============================================================
+
+model AuditLog {
+  id String @id @default(uuid())
+
+  userId String?
+
+  entityType String
+  entityId   String
+
+  action String
+
+  oldData Json?
+  newData Json?
+
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}
